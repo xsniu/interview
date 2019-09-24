@@ -605,6 +605,59 @@ virtual int A() = 0;
 * 虚函数的类用于 “实作继承”，继承接口的同时也继承了父类的实现。当然大家也可以完成自己的实现。纯虚函数关注的是接口的统一性，实现由子类完成。 
 * 带纯虚函数的类叫虚基类，这种基类不能直接生成对象，而只有被继承，并重写其虚函数后，才能使用。这样的类也叫抽象类。抽象类和大家口头常说的虚基类还是有区别的，在 C# 中用 abstract 定义抽象类，而在 C++ 中有抽象类的概念，但是没有这个关键字。抽象类被继承后，子类可以继续是抽象类，也可以是普通类，而虚基类，是含有纯虚函数的类，它如果被继承，那么子类就必须实现虚基类里面的所有纯虚函数，其子类不能是抽象类。
 
+### 虚函数表剖析
+* 类A包含虚函数vfunc1，vfunc2，由于类A包含虚函数，故类A拥有一个虚表。
+  ```cpp
+  class A {
+    public:
+        virtual void vfunc1();
+        virtual void vfunc2();
+        void func1();
+        void func2();
+    private:
+        int m_data1, m_data2;
+    };
+  ```
+  ![](images/vtable1.png)
+类A的对象模型  
+  ![](images/vtable2.png)
+* 动态绑定
+  ```cpp
+  class A {
+    public:
+        virtual void vfunc1();
+        virtual void vfunc2();
+        void func1();
+        void func2();
+    private:
+        int m_data1, m_data2;
+    };
+
+    class B : public A {
+    public:
+        virtual void vfunc1();
+        void func1();
+    private:
+        int m_data3;
+    };
+
+    class C: public B {
+    public:
+        virtual void vfunc2();
+        void func2();
+    private:
+        int m_data1, m_data4;
+    };
+  ```
+  类A是基类，类B继承类A，类C又继承类B。类A，类B，类C，其对象模型如下图所示。
+
+  ![](images/vtable3.png)
+  
+  由于这三个类都有虚函数，故编译器为每个类都创建了一个虚表，即类A的虚表（A vtbl），类B的虚表（B vtbl），类C的虚表（C vtbl）。类A，类B，类C的对象都拥有一个虚表指针，*__vptr，用来指向自己所属类的虚表。
+类A包括两个虚函数，故A vtbl包含两个指针，分别指向A::vfunc1()和A::vfunc2()。
+类B继承于类A，故类B可以调用类A的函数，但由于类B重写了B::vfunc1()函数，故B vtbl的两个指针分别指向B::vfunc1()和A::vfunc2()。
+类C继承于类B，故类C可以调用类B的函数，但由于类C重写了C::vfunc2()函数，故C vtbl的两个指针分别指向B::vfunc1()（指向继承的最近的一个类的函数）和C::vfunc2()。
+
 ### 虚函数指针、虚函数表
 
 * 虚函数指针：在含有虚函数类的对象中，指向虚函数表，在运行时确定。
